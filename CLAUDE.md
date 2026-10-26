@@ -67,5 +67,7 @@ Start with the spikes listed there.
 
 ## Conventions
 
+- **pnpm only**: `pnpm install`, `pnpm <script>`, and `pnpm dlx` for one-off tools (never `npm`/`npx`).
+  CLIs used regularly (wrangler, drizzle-kit) are devDependencies, run as `pnpm wrangler …`.
 - Write docs in `docs/`. Update `docs/README.md` when adding one.
 - Date research claims (`checked YYYY-MM-DD`): the official site and formulas change.
