@@ -1,0 +1,9 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "rg-spike-04-og",
+	"main": "src/worker-og.ts",
+	"compatibility_date": "2026-10-01",
+	"observability": { "enabled": true },
+	"rules": [{ "type": "Data", "globs": ["**/*.otf"], "fallthrough": false }],
+	"r2_buckets": [{ "binding": "BUCKET", "bucket_name": "rg-spike-04-fonts" }]
+}

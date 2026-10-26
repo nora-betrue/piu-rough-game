@@ -3,8 +3,9 @@
 A web app for tracking Pump It Up (Phoenix / Phoenix 2) scores: import from the official site,
 show a fast public profile, make pretty top-50 exports, and filter and analyse all of a user's scores.
 
-**Status:** pre-code. Research is done and the architecture is agreed (`docs/ARCHITECTURE.md`).
-Start with the spikes listed there.
+**Status:** early code. Research is done and the architecture is agreed (`docs/ARCHITECTURE.md`).
+`apps/web` (SvelteKit) has a landing page and design system (`docs/DESIGN.md`). Score tracking and the
+spikes listed in the architecture doc come next.
 
 ## Decisions (2026-10-26)
 
