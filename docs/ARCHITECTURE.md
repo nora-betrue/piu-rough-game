@@ -277,13 +277,16 @@ uploads use a per-user upload token, scoped to the import endpoint and revocable
 
 ## Spikes (do these first)
 
+The full briefs are in [`spikes/`](spikes/README.md). Each one is self-contained and can run in parallel.
+
 1. **Workers → piugame.com TLS.** Does `fetch("https://piugame.com/")` from a deployed Worker
    succeed, given the missing intermediate? If not, the scraper runs in a Cloudflare Container
    with `NODE_EXTRA_CA_CERTS`.
 2. **Login from Cloudflare egress.** Does the `login_check.php` → `am-pass.net` flow work from
-   Worker IPs, without captcha or blocking?
+   Cloudflare, without captcha or blocking? It also produces scrubbed page fixtures for parser tests.
 3. **Bookmarklet CSP** on piugame.com. If external scripts are blocked, fall back to an inline bundle or a userscript.
-4. **Export bundle size.** Satori + resvg-wasm + font loading inside the Worker size limit.
+4. **Export rendering.** Satori + resvg-wasm + Korean font inside the Worker size and CPU limits.
+5. **PIU Scores API access.** Tool key, the `official/rankings` row count, and catalog field coverage.
 
 ## Cost estimate (monthly)
 
