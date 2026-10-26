@@ -1,0 +1,39 @@
+{
+  "name": "rg-spike-04-export-rendering",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Spike 4: top-50 export rendering (satori + resvg-wasm) in a Worker",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "fonts": "node scripts/fonts.mjs",
+    "placeholders": "node scripts/placeholders.mjs && node scripts/presize.mjs",
+    "hb": "node scripts/extract-hb.mjs",
+    "bench": "node scripts/bench.mjs",
+    "samples": "node scripts/samples.mjs",
+    "worker:hand": "pnpm hb && wrangler deploy",
+    "worker:og": "wrangler deploy -c wrangler.og.jsonc",
+    "typecheck": "tsc -p ."
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.17.0",
+      "onFail": "download"
+    }
+  },
+  "dependencies": {
+    "@cf-wasm/og": "^0.5.0",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "satori": "^0.63.2",
+    "satori-html": "^0.3.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261025.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "fontkit": "^2.0.4",
+    "subset-font": "^2.9.0",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.152.0"
+  }
+}
