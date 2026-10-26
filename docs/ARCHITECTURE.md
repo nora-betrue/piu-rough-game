@@ -214,7 +214,7 @@ Fonts: **Pretendard** (OFL, covers Latin + Korean), subset and stored in R2.
 
 ## i18n
 
-- **Paraglide JS** (inlang), the official SvelteKit integration (`sv add paraglide`). Messages are
+- **Paraglide JS** (inlang), the official SvelteKit integration (`pnpm dlx sv add paraglide`). Messages are
   compiled into tree-shakeable functions, so each page ships only the strings it uses.
 - Locales at launch: `en` (base), `es`, `ko`. **Every UI string goes through a message from
   day one**, even before translations exist. Missing translations fall back to English.
