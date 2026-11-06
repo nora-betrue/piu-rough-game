@@ -1,0 +1,28 @@
+{
+  "name": "rg-spike-02-piugame-login",
+  "version": "1.0.0",
+  "description": "Spike 2: piugame.com login from Node and a Cloudflare Worker (throwaway)",
+  "scripts": {
+    "login": "NODE_EXTRA_CA_CERTS=certs/sectigo-dv-r36.pem RAW_DIR=${RAW_DIR:?set RAW_DIR outside the repo} node node.ts login",
+    "sid:check": "NODE_EXTRA_CA_CERTS=certs/sectigo-dv-r36.pem node node.ts reuse",
+    "wrong-password": "NODE_EXTRA_CA_CERTS=certs/sectigo-dv-r36.pem node node.ts wrong-password",
+    "worker:deploy": "wrangler deploy",
+    "worker:delete": "wrangler delete --name rg-spike-02"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.17.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261025.1",
+    "@types/node": "^26.6.5",
+    "cheerio": "^1.2.0",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.152.0"
+  },
+  "private": true
+}

@@ -1,0 +1,274 @@
+{
+  "runtime": "node v22.23.1",
+  "started": "2026-10-26T20:28:07.166Z",
+  "requests": 16,
+  "result": {
+    "sidCookie": true,
+    "sidCookieName": "sid",
+    "cookieNamesAfterPost": [
+      "PHPSESSID@api.am-pass.net",
+      "sid@.api.am-pass.net",
+      "XSRF-TOKEN@api.am-pass.net",
+      "laravel_session@api.am-pass.net",
+      "2a0d2363701f23f8a75028924a3af643@.piugame.com",
+      "sid@.piugame.com",
+      "PHPSESSID@.piugame.com"
+    ],
+    "cookieNamesAfterSso": [
+      "2a0d2363701f23f8a75028924a3af643@.piugame.com",
+      "sid@.piugame.com",
+      "PHPSESSID@.piugame.com",
+      "PHPSESSID@api.am-pass.net",
+      "sid@.api.am-pass.net",
+      "XSRF-TOKEN@api.am-pass.net",
+      "laravel_session@api.am-pass.net",
+      "sid@.am-pass.net",
+      "PHPSESSID@.am-pass.net",
+      "2a0d2363701f23f8a75028924a3af643@.am-pass.net",
+      "382848df101af958068ae3885a2a6857@.am-pass.net"
+    ],
+    "postStatus": 200,
+    "postBodyHint": "alert: This is not a registered email,\\nplease sign up and log in."
+  },
+  "pages": [
+    {
+      "path": "/my_page/my_best_score.php?&&page=1",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/my_best_score.php?&&page=1",
+      "bytes": 181388,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginPage": true,
+      "bestScoreLayout": "neither"
+    },
+    {
+      "path": "/my_page/recently_played.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/recently_played.php",
+      "bytes": 181338,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginPage": true
+    },
+    {
+      "path": "/my_page/play_data.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/play_data.php",
+      "bytes": 181308,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginPage": true
+    },
+    {
+      "path": "/my_page/pumbility.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/pumbility.php",
+      "bytes": 181308,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginPage": true
+    },
+    {
+      "path": "/my_page/title.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/title.php",
+      "bytes": 181288,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginPage": true
+    }
+  ],
+  "hops": [
+    {
+      "n": 1,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/",
+      "status": 302,
+      "setCookies": [],
+      "ms": 1184,
+      "location": "https://api.am-pass.net/sso?referer=REDACTED"
+    },
+    {
+      "n": 2,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://api.am-pass.net/sso?referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid",
+        "XSRF-TOKEN",
+        "laravel_session"
+      ],
+      "ms": 6884,
+      "location": "https://piugame.com/ssoc?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 3,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/ssoc?sid=REDACTED&referer=REDACTED",
+      "status": 301,
+      "setCookies": [],
+      "ms": 1656,
+      "location": "https://piugame.com/ssoc/?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 4,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/ssoc/?sid=REDACTED&referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid"
+      ],
+      "ms": 1201,
+      "location": "https://piugame.com/"
+    },
+    {
+      "n": 5,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID",
+        "2a0d2363701f23f8a75028924a3af643"
+      ],
+      "ms": 311
+    },
+    {
+      "n": 6,
+      "step": "2 login POST",
+      "method": "POST",
+      "url": "https://piugame.com/bbs/login_check.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 670
+    },
+    {
+      "n": 7,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/",
+      "status": 302,
+      "setCookies": [],
+      "ms": 1468,
+      "location": "https://api.am-pass.net/sso?referer=REDACTED"
+    },
+    {
+      "n": 8,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://api.am-pass.net/sso?referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid",
+        "XSRF-TOKEN",
+        "laravel_session"
+      ],
+      "ms": 1563,
+      "location": "https://am-pass.net/ssoc?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 9,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/ssoc?sid=REDACTED&referer=REDACTED",
+      "status": 301,
+      "setCookies": [],
+      "ms": 288,
+      "location": "https://am-pass.net/ssoc/?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 10,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/ssoc/?sid=REDACTED&referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid"
+      ],
+      "ms": 1130,
+      "location": "https://am-pass.net/"
+    },
+    {
+      "n": 11,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID",
+        "PHPSESSID",
+        "2a0d2363701f23f8a75028924a3af643",
+        "382848df101af958068ae3885a2a6857"
+      ],
+      "ms": 665
+    },
+    {
+      "n": 12,
+      "step": "5 /my_page/my_best_score.php?&&page=1",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/my_best_score.php?&&page=1",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 734
+    },
+    {
+      "n": 13,
+      "step": "5 /my_page/recently_played.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/recently_played.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 414
+    },
+    {
+      "n": 14,
+      "step": "5 /my_page/play_data.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/play_data.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 280
+    },
+    {
+      "n": 15,
+      "step": "5 /my_page/pumbility.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/pumbility.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 278
+    },
+    {
+      "n": 16,
+      "step": "5 /my_page/title.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/title.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 291
+    }
+  ]
+}
