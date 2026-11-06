@@ -1,0 +1,312 @@
+{
+  "runtime": "node v22.23.1",
+  "started": "2026-11-06T19:42:43.413Z",
+  "requests": 17,
+  "result": {
+    "sidCookie": true,
+    "sidCookieName": "sid",
+    "cookieNamesAfterPost": [
+      "PHPSESSID@api.am-pass.net",
+      "sid@.api.am-pass.net",
+      "XSRF-TOKEN@api.am-pass.net",
+      "laravel_session@api.am-pass.net",
+      "2a0d2363701f23f8a75028924a3af643@.piugame.com",
+      "sid@.piugame.com",
+      "PHPSESSID@.piugame.com"
+    ],
+    "cookieNamesAfterSso": [
+      "2a0d2363701f23f8a75028924a3af643@.piugame.com",
+      "sid@.piugame.com",
+      "PHPSESSID@.piugame.com",
+      "PHPSESSID@api.am-pass.net",
+      "sid@.api.am-pass.net",
+      "XSRF-TOKEN@api.am-pass.net",
+      "laravel_session@api.am-pass.net",
+      "sid@.am-pass.net",
+      "PHPSESSID@.am-pass.net",
+      "2a0d2363701f23f8a75028924a3af643@.am-pass.net",
+      "382848df101af958068ae3885a2a6857@.am-pass.net"
+    ],
+    "sidChangedOnPost": false,
+    "postStatus": 200,
+    "postBodyHint": "191425 bytes, title=PUMP IT UP PHOENIX2",
+    "rejected": false
+  },
+  "pages": [
+    {
+      "path": "/my_page/my_best_score.php?&&page=1",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/my_best_score.php?&&page=1",
+      "bytes": 179882,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "alert": "No registered Game ID found.",
+      "bestScoreLayout": "neither"
+    },
+    {
+      "path": "/my_page/recently_played.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/recently_played.php",
+      "bytes": 179884,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "alert": "No registered Game ID found."
+    },
+    {
+      "path": "/my_page/play_data.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/play_data.php",
+      "bytes": 179878,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "alert": "No registered Game ID found."
+    },
+    {
+      "path": "/my_page/pumbility.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/pumbility.php",
+      "bytes": 179878,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "alert": "No registered Game ID found."
+    },
+    {
+      "path": "/my_page/title.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/title.php",
+      "bytes": 179874,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "alert": "No registered Game ID found."
+    }
+  ],
+  "hops": [
+    {
+      "n": 1,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/",
+      "status": 302,
+      "setCookies": [],
+      "ms": 1298,
+      "location": "https://api.am-pass.net/sso?referer=REDACTED"
+    },
+    {
+      "n": 2,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://api.am-pass.net/sso?referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid",
+        "XSRF-TOKEN",
+        "laravel_session"
+      ],
+      "ms": 1833,
+      "location": "https://piugame.com/ssoc?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 3,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/ssoc?sid=REDACTED&referer=REDACTED",
+      "status": 301,
+      "setCookies": [],
+      "ms": 240,
+      "location": "https://piugame.com/ssoc/?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 4,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/ssoc/?sid=REDACTED&referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid"
+      ],
+      "ms": 233,
+      "location": "https://piugame.com/"
+    },
+    {
+      "n": 5,
+      "step": "1 warm-up",
+      "method": "GET",
+      "url": "https://piugame.com/",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID",
+        "2a0d2363701f23f8a75028924a3af643"
+      ],
+      "ms": 291
+    },
+    {
+      "n": 6,
+      "step": "2 login POST",
+      "method": "POST",
+      "url": "https://piugame.com/bbs/login_check.php",
+      "status": 302,
+      "setCookies": [
+        "sid",
+        "PHPSESSID",
+        "6e1280981e1dfd9169c5dea9c28ff2e3 (deleted)",
+        "a3e94372a6379bc1ae3698dfdf38595b (deleted)"
+      ],
+      "ms": 639,
+      "location": "https://piugame.com/"
+    },
+    {
+      "n": 7,
+      "step": "2 login POST",
+      "method": "GET",
+      "url": "https://piugame.com/",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 1315
+    },
+    {
+      "n": 8,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/",
+      "status": 302,
+      "setCookies": [],
+      "ms": 1499,
+      "location": "https://api.am-pass.net/sso?referer=REDACTED"
+    },
+    {
+      "n": 9,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://api.am-pass.net/sso?referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid",
+        "XSRF-TOKEN",
+        "laravel_session"
+      ],
+      "ms": 1626,
+      "location": "https://am-pass.net/ssoc?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 10,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/ssoc?sid=REDACTED&referer=REDACTED",
+      "status": 301,
+      "setCookies": [],
+      "ms": 297,
+      "location": "https://am-pass.net/ssoc/?sid=REDACTED&referer=REDACTED"
+    },
+    {
+      "n": 11,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/ssoc/?sid=REDACTED&referer=REDACTED",
+      "status": 302,
+      "setCookies": [
+        "PHPSESSID",
+        "sid"
+      ],
+      "ms": 1201,
+      "location": "https://am-pass.net/"
+    },
+    {
+      "n": 12,
+      "step": "4 am-pass SSO",
+      "method": "GET",
+      "url": "https://am-pass.net/",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID",
+        "PHPSESSID",
+        "2a0d2363701f23f8a75028924a3af643",
+        "382848df101af958068ae3885a2a6857"
+      ],
+      "ms": 1003
+    },
+    {
+      "n": 13,
+      "step": "5 /my_page/my_best_score.php?&&page=1",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/my_best_score.php?&&page=1",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 1245
+    },
+    {
+      "n": 14,
+      "step": "5 /my_page/recently_played.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/recently_played.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 452
+    },
+    {
+      "n": 15,
+      "step": "5 /my_page/play_data.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/play_data.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 637
+    },
+    {
+      "n": 16,
+      "step": "5 /my_page/pumbility.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/pumbility.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 450
+    },
+    {
+      "n": 17,
+      "step": "5 /my_page/title.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/title.php",
+      "status": 200,
+      "setCookies": [
+        "sid",
+        "PHPSESSID"
+      ],
+      "ms": 515
+    }
+  ],
+  "note": "pages[] re-summarised offline from the same raw HTML after fixing login-page detection"
+}
