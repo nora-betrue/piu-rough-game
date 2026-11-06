@@ -27,14 +27,17 @@
                                                       ▼                   └────────▲─────────┘
                                               Queue: imports                       │
                                               Queue: seed                          │ writes
+                                              Queue: exports                       │
                                                       ▼                            │
                                     jobs Worker (queue consumers + cron) ──────────┤
-                                      ├─ piugame scraper (or Container, see Spikes)│
-                                      └─ import pipeline ──► D1 (system of record) ┘
+                                      ├─ piugame scraper                           │
+                                      ├─ import pipeline ──► D1 (system of record) │
+                                      └─ export renderer ──────────────────────────┘
 ```
 
-All of it runs on Cloudflare: Workers, D1, R2, Queues, Cron Triggers (and Containers only if the
-TLS spike needs them).
+All of it runs on Cloudflare: Workers, D1, R2, Queues, Cron Triggers. The scraper is a plain Worker:
+deployed Workers reach piugame.com despite its incomplete TLS chain (spike 1, see "piugame.com from
+Workers").
 
 ## Repo layout (planned)
 
@@ -118,8 +121,10 @@ Every score-derived table has a `mix` column.
 |---|---|---|
 | `imports` | `{importId, playerId, source, mode: "full" \| "incremental"}` | Low concurrency (2–3) to be polite to piugame.com; retries with backoff; dead-letter queue |
 | `seed` | `{kind: "rankings"}` then one `{kind: "player", gameTag}` per player | Concurrency 1 (respects PIU Scores' 600 req/min) |
+| `exports` | `{playerId, mix, presetId, scale, hash, discord?: {applicationId, interactionToken}}` | Concurrency 2–3; each render is 2–4 s of CPU (see "Exports") |
 
-Messages **never contain credentials**. The consumer loads them from `piugame_links` and decrypts
+Messages **never contain credentials**. (The one short-lived exception: a Discord interaction
+token, valid for 15 minutes, so the export job can edit the bot's reply.) The consumer loads them from `piugame_links` and decrypts
 them in memory. Limits that matter (checked 2026-10-26): 128 KB per message, `delaySeconds` up to
 24 h, 15 min wall time per consumer invocation, 14 days retention. Paid plan: 1M operations/month
 included, then $0.40/M. That's far beyond what a few hundred users need.
@@ -149,9 +154,29 @@ included, then $0.40/M. That's far beyond what a few hundred users need.
 4. Insert new plays, or merge judgements into an existing play.
 5. Recompute PBs for the affected charts, then `player_stats`.
 6. Write snapshots and purge the edge cache.
-7. Finish the `imports` row with counts and per-step timings (Tachi's import document).
+7. If the top-50 render hash changed, enqueue an `exports` job for the default preset (see "Exports").
+8. Finish the `imports` row with counts and per-step timings (Tachi's import document).
 
 Writes use `db.batch()` with multi-row inserts. D1 allows 100 bound parameters per statement.
+
+## piugame.com from Workers
+
+Spike 1 (2026-10-26, [PR #6](https://github.com/nora-betrue/piu-rough-game/pull/6)) answered this:
+
+- **Deployed Workers can fetch piugame.com, phoenix.piugame.com and am-pass.net**, and still verify
+  certificates. The Cloudflare edge fills in piugame's missing intermediate certificate the way a
+  browser does. (Deliberately broken test hosts were all rejected, so verification is really on.)
+  This is **observed, undocumented behaviour**, so it gets a canary (below).
+- **A TLS failure arrives as an HTTP `525`/`526` response, not a thrown error.** The scraper must
+  treat it as fatal: fail the job, don't retry it as a transient 5xx, and never parse the body as a page.
+- **Local `wrangler dev` (workerd) rejects the chain.** Use `wrangler dev --remote` for live checks,
+  and saved HTML fixtures for tests. Never "fix" local dev by disabling verification.
+- **Canary:** the daily auto-scan cron starts with one `GET https://piugame.com/`. On `525`/`526` it
+  pauses imports and alerts, so a Cloudflare change shows up as one clear error, not as broken imports.
+- Static assets are cached at the edge. The asset-sync job uses `cache: "no-store"` when it needs to
+  detect changed art.
+- **Fallback, not built:** if this ever stops working, the scraper moves to a Cloudflare Container
+  running Node with `NODE_EXTRA_CA_CERTS` (Containers are available on the account's Paid plan).
 
 ## Credentials
 
@@ -199,6 +224,10 @@ Policy:
   running the job.
 - These are raster PNGs at most 300px wide: sharp at their native size or smaller. Big exports
   should place them at ≤ 1× their pixel size (a 150px-wide grade at 2×), not upscale them.
+- The sync job also writes **pre-sized derivatives for each export scale**
+  (`official/{mix}/{scale}x/…`, same for jackets). Exports draw images at exactly those pixels with
+  resvg's `optimizeSpeed`, which is lossless at 1:1 and halves render time (spike 4). Jackets are 300 px,
+  so they are slightly upscaled in 2× exports.
 - **Fallback theme:** our own CSS/SVG badges in the same layout. They're used if an asset is missing,
   and as an optional "minimal" export theme.
 - Jackets and official avatars: mirrored to R2 on first use, same policy.
@@ -207,10 +236,60 @@ Policy:
 
 ## Exports (top 50)
 
-Satori (`satori-html`, no React) + resvg-wasm → PNG, rendered in a Worker. The output is cached in
-`R2 exports/{hash(snapshot_version, preset)}.png`. The same renderer makes profile OpenGraph images
-and the Discord `/top50` image. The customizer previews live in the browser with the same layout.
-Fonts: **Pretendard** (OFL, covers Latin + Korean), subset and stored in R2.
+Spike 4 (2026-10-26, [PR #7](https://github.com/nora-betrue/piu-rough-game/pull/7)) measured this.
+A 1080-wide top-50 costs **2–4 s of CPU** on Workers when tuned (5–9 s untuned), and nearly every
+render runs in a fresh isolate. So **exports are rendered only by the `exports` queue consumer, never
+in a user-facing request** (not even in `waitUntil`).
+
+### Renderer
+
+- `satori` (**exact version pin**, `satori/standalone` with `layout.wasm` imported as a module) +
+  `satori-html` (call it as `html([markup])`: plain `html(string)` is O(n²)) + `@resvg/resvg-wasm`.
+  Not `@cf-wasm/og`: it's 1.5–2× slower, runs out of memory at 2×, and pulls missing glyphs from Google Fonts.
+- Current satori doesn't run in workerd as published: its bundled harfbuzz reads
+  `self.location` and compiles wasm from bytes. A ~10-line shim (a fake `location` + a precompiled
+  `hb.wasm`) fixes both. Keep a render smoke test in CI, because any satori upgrade can break it.
+- Layout rules that keep resvg fast: every image is drawn at its exact pre-sized pixel size, no
+  `overflow:hidden` on tiles (satori turns each one into a mask), and `box-sizing:border-box` everywhere.
+- **Scale:** 1× (1080 px wide, ~2.4 MB PNG) by default. 2× only as an explicit download (8 MB, ~2.5×
+  the CPU). Shrinking the PNG output (quantisation, or WebP/JPEG) is a follow-up.
+
+### Fonts
+
+- **Pretendard** Medium + Bold, subset to KS X 1001 Hangul + jamo + Latin + kana (~400 KB OTF per
+  weight), **bundled into the Worker**. Font size doesn't affect CPU, and bundling saves R2 reads.
+- Pretendard has **no CJK ideographs** (no kanji/hanzi). Satori's `loadAdditionalAsset` loads
+  fallbacks from R2 only when a glyph is missing:
+  - a **catalog-driven CJK subset** (Noto Sans JP), regenerated by the catalog sync from every code
+    point in song titles that Pretendard lacks (a few KB, content-hashed);
+  - full Pretendard for rare Hangul outside KS X 1001 (user-entered text).
+- OFL: a subset is a "Modified Version". Rendering on the server doesn't distribute it, but the
+  website serves Pretendard's **official** subset webfonts, not ours.
+
+### Caching and triggers
+
+- **Render input:** a canonical JSON (sorted keys) of everything that changes the picture:
+  - the top-50 rows, and the header (display name, avatar key, equipped title, PUMBILITY total);
+  - the preset (theme, layout, fields), locale, scale and mix;
+  - `RENDERER_VERSION`: bump it when the template, fonts or art change.
+- **Cache key:** `R2 exports/{mix}/{playerId}/{sha256(render input)}.png`. The player's snapshot records
+  the current hash and key. An R2 lifecycle rule deletes exports older than 30 days, so stale versions
+  clean themselves up.
+- **When an import changes the top 50:** the pipeline computes the new hash. If it differs from the
+  snapshot's, or the object is missing, it enqueues a render of the **default preset**. Unchanged
+  imports, which is most daily scans, cost nothing.
+- **Seeded (official) players:** the weekly seed job does the same for every player whose hash
+  changed (~100 renders a week, which is negligible).
+- **Lazy fallback, for everything else:** a viewed profile, an `og:image`, a download or a Discord
+  command whose object is missing enqueues a render. That covers a `RENDERER_VERSION` bump (images
+  re-render as they're viewed, not all at once), extra presets and deleted objects.
+- **Dedupe:** a pending marker per hash (a D1 row with a timestamp, expiring after ~10 min) means only
+  the first request enqueues. The consumer `HEAD`s R2 before rendering, so a duplicate is free.
+- **The profile page never waits on the PNG.** It draws the top 50 as HTML. The PNG only feeds the
+  download button (which shows "generating…" while pending), link previews and Discord.
+- **Stable URL:** `/u/{handle}/top50.png` serves the current hashed object. If there isn't one yet, it
+  serves a light placeholder and enqueues a render. Profile OpenGraph images (1200×630) use the same
+  pipeline. They haven't been measured yet, but should be about 4× cheaper.
 
 ## i18n
 
@@ -231,7 +310,8 @@ Fonts: **Pretendard** (OFL, covers Latin + Korean), subset and stored in R2.
 
 ## Uploads (custom avatars)
 
-1. The browser crops and resizes to 256×256 and encodes WebP.
+1. The browser crops and resizes to 256×256 and encodes WebP. (Not yet verified: whether satori +
+   resvg-wasm accept WebP. If not, the upload handler also stores a PNG derivative for exports.)
 2. `POST /api/avatar` (authenticated, rate-limited). The Worker checks the magic bytes (not
    the extension), size ≤ 200 KB and dimensions, then writes to `R2 avatars/{user_id}/{sha256}.webp`.
 3. The image is served from an R2 custom domain (`img.roughgame.ing`) with immutable caching. A new
@@ -250,8 +330,10 @@ An **HTTP-interactions** bot, not a gateway bot: Discord POSTs each slash comman
   Crypto). Invalid requests get a 401. Discord also checks this when you set the endpoint URL.
 - **Commands:** `/profile [user]`, `/top50 [user]`, `/pb <song> [chart]`, `/compare <user>`.
   They're registered by `scripts/register-discord-commands.ts` through the REST API.
-- **3-second rule:** reply instantly when possible. For images, reply "deferred" (`type 5`), then
-  render in `ctx.waitUntil` (or reuse a cached export) and edit the original response with the image.
+- **3-second rule:** reply instantly when possible. For `/top50`, reply "deferred" (`type 5`). On a
+  cache hit, edit the response with the image straight away. On a miss, enqueue an `exports` job that
+  carries the interaction token (valid 15 min), and the consumer edits the reply when the image is ready.
+  Never render inside `waitUntil`.
 - **Identity:** users log in with Discord OAuth, so a command with no target shows the caller's
   own profile.
 - **Install contexts:** user install (works in any server or DM) **and** guild install.
@@ -268,24 +350,22 @@ uploads use a per-user upload token, scoped to the import endpoint and revocable
 
 | Job | When | What |
 |---|---|---|
-| Daily auto-scan | Daily, spread over a few hours | Enqueue `incremental` for every auto-scan link |
+| Daily auto-scan | Daily, spread over a few hours | Canary `GET https://piugame.com/` first (pause on `525`/`526`), then enqueue `incremental` for every auto-scan link |
 | Weekly full scan | Weekly, staggered | Enqueue `full` per link |
 | Top-100 seed | Weekly | Enqueue `seed` → `official/rankings` + `official/players/{tag}` → `players(kind=official)` + `official_placements` → snapshots |
-| Catalog sync | Daily | Pull PIU Scores `songs`/`charts`/`versions` (ETags) + `seeds/catalog-supplement.json` → upsert → re-match orphans |
-| Assets sync | Weekly, and on catalog changes | Mirror new jackets and manifest assets to R2 |
+| Catalog sync | Daily | Pull PIU Scores `songs`/`charts`/`versions` (ETags) + `seeds/catalog-supplement.json` → upsert → re-match orphans → regenerate the CJK fallback font subset |
+| Assets sync | Weekly, and on catalog changes | Mirror new jackets and manifest assets to R2, plus pre-sized derivatives per export scale |
 | Recompute | On deploy, when a formula version changes | Re-derive PBs, stats and snapshots from `plays` |
 
 ## Spikes (do these first)
 
 The full briefs are in [`spikes/`](spikes/README.md). Each one is self-contained and can run in parallel.
 
-1. **Workers → piugame.com TLS.** Does `fetch("https://piugame.com/")` from a deployed Worker
-   succeed, given the missing intermediate? If not, the scraper runs in a Cloudflare Container
-   with `NODE_EXTRA_CA_CERTS`.
+1. ✅ **Workers → piugame.com TLS.** Answered: deployed Workers work. See "piugame.com from Workers".
 2. **Login from Cloudflare egress.** Does the `login_check.php` → `am-pass.net` flow work from
    Cloudflare, without captcha or blocking? It also produces scrubbed page fixtures for parser tests.
 3. **Bookmarklet CSP** on piugame.com. If external scripts are blocked, fall back to an inline bundle or a userscript.
-4. **Export rendering.** Satori + resvg-wasm + Korean font inside the Worker size and CPU limits.
+4. ✅ **Export rendering.** Answered: it fits, but costs 2–4 s of CPU, so it runs in a queue consumer. See "Exports".
 5. **PIU Scores API access.** Tool key, the `official/rankings` row count, and catalog field coverage.
 
 ## Cost estimate (monthly)
@@ -294,9 +374,9 @@ The full briefs are in [`spikes/`](spikes/README.md). Each one is self-contained
 |---|---|
 | Workers Paid (Workers, D1, Queues, Cron included) | $5 |
 | R2 (snapshots, assets, avatars, exports: a few GB, no egress fees) | ~$0–2 |
-| Containers (only if spike 1 fails; a few scrape-minutes a day) | ~$0–5 |
 | Domain `roughgame.ing` | already bought |
-| **Total** | **~$5–12**, well under the $50 budget |
+| Worker CPU beyond the included 30M CPU-ms (exports: ~3 s each, so ~10,000 renders/month fit) | ~$0 |
+| **Total** | **~$5–7**, well under the $50 budget |
 
 ## D1
 

@@ -32,8 +32,11 @@ Tailwind utilities come from `@theme inline`: `bg-surface`, `text-muted`, `borde
 
 ## Type
 
-Pretendard (Latin + Korean) first, then system fonts. Self-hosting the subset is still to do
-(`ARCHITECTURE.md`, "i18n"), so for now it only applies if the user has it installed.
+Pretendard (Latin + Korean) first, then system fonts. Loading it is still to do. Use Pretendard's
+**official** subset webfonts (its dynamic-subset CSS, split by `unicode-range`), not a subset we make:
+under the OFL, a modified font can't be distributed under the name "Pretendard". Our own subset is
+only for server-side export rendering, which doesn't distribute it (`ARCHITECTURE.md`, "Exports").
+Until then it only applies if the user has Pretendard installed.
 
 ## Components (`apps/web/src/lib/components/`)
 

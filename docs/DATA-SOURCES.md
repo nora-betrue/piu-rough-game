@@ -75,10 +75,12 @@ With it added to the system CA bundle, `curl --cacert` gets a verified `302` fro
 In Node: commit the PEM and pass it via `NODE_EXTRA_CA_CERTS` or the client's `ca` option.
 **Never** disable TLS verification: these requests carry user passwords.
 
-**⚠ Open risk for Cloudflare Workers:** a Worker's `fetch()` can't be given extra CA certificates.
-Whether Workers complete the chain themselves (as browsers do) is **untested**. This is the first
-spike (see `ARCHITECTURE.md`, "Spikes"). If Workers reject the chain, the scraper runs as a small
-Node container (Cloudflare Containers) with `NODE_EXTRA_CA_CERTS`, called from the queue consumer.
+**Cloudflare Workers (spike 1, checked 2026-10-26):** a deployed Worker's `fetch()` reaches
+piugame.com, phoenix.piugame.com and am-pass.net, because the edge fills in the missing intermediate itself, and
+it still verifies certificates. A TLS failure there comes back as an HTTP `525`/`526` *response*,
+not a thrown error. Local `wrangler dev` (workerd) rejects the chain, so use `--remote` or saved
+fixtures. The PEM / `NODE_EXTRA_CA_CERTS` fix above is still what Node scripts and tests use. See
+`ARCHITECTURE.md`, "piugame.com from Workers", for the canary and fallback.
 
 ### Trust & security notes
 

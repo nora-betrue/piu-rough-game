@@ -51,8 +51,11 @@ spikes listed in the architecture doc come next.
 - piugame passwords are stored only when the user opts in, and only as encrypted
   ciphertext (`docs/ARCHITECTURE.md`, "Credentials"). Never log them or `sid` cookies, and never put them in
   queue messages, errors or R2.
-- piugame.com serves an incomplete TLS chain. Fix it by bundling the Sectigo DV R36
-  intermediate (`NODE_EXTRA_CA_CERTS`). **Never** disable certificate verification.
+- piugame.com serves an incomplete TLS chain. **Deployed Workers** handle it with no changes (the edge
+  fills in the chain), and a TLS failure there is a `525`/`526` response that must fail the job.
+  **Node tooling and tests** bundle the Sectigo DV R36 intermediate (`NODE_EXTRA_CA_CERTS`). Local
+  `wrangler dev` can't reach piugame.com: use `--remote` or fixtures. **Never** disable certificate verification.
+- Exports render only in the `exports` queue consumer (2–4 s of CPU each), never in a request or `waitUntil`.
 - Never commit Andamiro art (grades, plates, jackets, avatars). Commit only the asset manifest.
 - Uploaded files: check magic bytes and size, and store under content hashes.
 - PIU Scores API tokens are user credentials: encrypt them at rest, and scope and revoke them.
