@@ -5,8 +5,8 @@ plate in the game, because we've all been there.
 
 🌐 **[roughgame.ing](https://roughgame.ing)** (not live yet)
 
-> **Status: planning.** The research and architecture are done (see [`docs/`](docs/)). There's no
-> app code yet.
+> **Status: early.** The research and architecture are done (see [`docs/`](docs/)). The SvelteKit app
+> in `apps/web` has a landing page and design system; score tracking isn't built yet.
 
 ## What it does
 
