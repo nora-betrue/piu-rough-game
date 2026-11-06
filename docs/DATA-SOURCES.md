@@ -24,13 +24,33 @@ path segment.
 
 ### Login flow
 
-1. `GET {base}/` to collect the anonymous session cookies.
-2. `POST {base}/bbs/login_check.php` as form-urlencoded: `url=/`, `mb_id=<email>`, `mb_password=<pw>`.
-3. Success means a cookie named `sid…` is now set. If there's no `sid`, the login was rejected.
-   A wrong password often still sets an *anonymous* sid. It only fails later, when an
-   authenticated page returns the login page (look for `.login_wrap`).
-4. `GET https://am-pass.net` to complete the SSO bounce.
-5. After that, every request just needs the `sid` cookie, plus an `Origin: {base}` header.
+Verified 2026-11-06 (spike 2), from Node and from a deployed Worker. About 12 requests and ~10 s per login.
+
+1. `GET {base}/` to collect the anonymous cookies. This already bounces through
+   `https://api.am-pass.net/sso?referer=…` → `{base}/ssoc?sid=…` → `{base}/`, and sets an
+   **anonymous** `sid`. Use `redirect: "manual"` and a domain-aware cookie jar: cookies land on
+   `.piugame.com`, `.am-pass.net` and the host-only `api.am-pass.net`.
+2. `POST {base}/bbs/login_check.php` as form-urlencoded: `url=/`, `mb_id=<email>`, `mb_password=<pw>`
+   (+ `Origin: {base}`). The login ID is the AM.PASS **email**.
+3. **Success = the POST returns `302 → {base}/`.** Failure = `200` with an `alert("…")` in the body.
+   The `sid` cookie tells you nothing: it exists before the POST, after a rejected POST and after a
+   successful one, and its value doesn't change on login.
+4. `GET https://am-pass.net` (the SSO bounce PIU Scores does). May not be needed: untested.
+5. After that, every request just needs the cookies (`sid`, `PHPSESSID`) plus `Origin: {base}`.
+   **Confirm the login on the first page:** it contains `var g5_is_member = "1"` and no
+   `form[name=flogin]`. Don't use `.login_wrap`: it's in the site header of *every* page.
+
+| Outcome | What the site returns | Our link status |
+|---|---|---|
+| Success | POST `302`; pages have `g5_is_member = "1"` | `ok` |
+| Wrong password | POST `200` + `alert("Your password is incorrect.…")` | `needs_attention` (no retry) |
+| Unknown email | POST `200` + `alert("This is not a registered email,…")` | `needs_attention` (no retry) |
+| Logged in, but no game card linked | every `my_page/*` URL: `200`, logged-in layout, `alert("No registered Game ID found."); document.location.replace("/")` | `needs_game_id`: tell the user to link a card on piugame.com. Not "zero scores". |
+| Session expired | a page shows `form[name=flogin]` / `g5_is_member = ""` | log in again (if a cached sid was used) |
+
+Cookie lifetimes as set: `sid` Max-Age 1 year, `PHPSESSID` 7 days, both renewed on every request. A
+session survived at 4 minutes and through a wrong-password attempt from another client. The 1 h and
+24 h reuse checks are pending. If they pass, cache the sid between scans (encrypted, like the password).
 
 **Phoenix 2 has no anonymous pages.** Leaderboards also need a login there.
 
@@ -38,9 +58,9 @@ path segment.
 
 | Page | What it has |
 |---|---|
-| `my_page/my_best_score.php?lv=<bucket>&&page=N` | **Personal bests.** Paginated. Song name, type + level (from step-ball image filenames), score, plate (from plate image filename), and on the Phoenix 2 redesign a date. The `lv` buckets are levels 10+; charts below 10 have no bucket and can only be counted from the "Total" header. Two layouts exist: classic `ul.my_best_scoreList` and the Phoenix 2 redesign that reuses the recently-played card. **Detect which one from the markup, not from the mix.** |
-| `my_page/recently_played.php` | Last ~50 plays **with full judgements** (P/Gr/Go/B/M in `td[data-th=PERFECT]` etc.), broken/stage-break flags, and dates. The only source of judgement counts. |
-| `my_page/pumbility.php` | Official PUMBILITY total plus the per-chart breakdown. Ground truth for checking our formula. |
+| `my_page/my_best_score.php?lv=<bucket>&&page=N` | **Personal bests.** Paginated, 12 cards per page. Song name, type + level (from step-ball image filenames), score, plate (from plate image filename), grade image and a date (`2026-11-05 10:49:14 (GMT+9)`). The `lv` options are `10…26, 27over, 10over, coop`; charts below 10 have no bucket and can only be counted from the "Total" header (or `play_data.php`, which offers `lv=1…9`). Two layouts exist: classic `ul.my_best_scoreList`, and the redesign that reuses the recently-played card (`ul.recently_playeList > li`). **Phoenix 2 serves the redesign** (checked 2026-11-06). **Detect which one from the markup, not from the mix.** |
+| `my_page/recently_played.php` | Last ~50 plays **with full judgements** (P/Gr/Go/B/M in `td[data-th=PERFECT]` etc.), broken/stage-break flags, dates, and (new) **a plate image** on passed plays (`div.li_in.st1 > img …/plate/mg.png`). That's the only source of judgement counts. Prefer the plate image over deriving the plate from judgements. |
+| `my_page/pumbility.php` | Official PUMBILITY total plus the per-chart breakdown (50 cards; they add up to the total). Ground truth for checking our formula. The total sits in `div.pumbility_total_wrap div.score`, **after a tier label** (`DIAMOND Lv.1`): taking the wrap's first number reads the tier level, not the total. |
 | `my_page/title.php` | Titles owned (`ul.data_titleList2 li`), the equipped title, and the avatar. |
 | `my_page/play_data.php?lv=<bucket>` | Count of records per level bucket. Useful as a "did the import get everything?" check. |
 | `my_page/game_id_information.php` | Game ID / player tag. |
@@ -56,7 +76,21 @@ path segment.
 - PUMBILITY values render as `17,418<span class="pumbility-point-sub">.45</span>`.
 - Pagination: the max page is in the `onclick` of the `i.last` icon's parent.
 - Song names are HTML-encoded. Decode them before matching to the catalog.
-- A best-list card with an **empty grade image** (`<img src="">`) is a stage break.
+- Grade art tells pass, broken and stage break apart:
+  - passed: `{grade}.png`;
+  - broken (failed but finished, a real score, no plate): `x_{grade}.png`;
+  - **empty grade image** (`<img src="">`): a stage break. On recent plays these cards also say
+    `STAGE BREAK`. On the best list the empty image is the *only* signal, and PIU Scores'
+    redesign parser counts these as broken scores instead of skipping them. ⚠ To confirm: one
+    empty-grade best card showed 924,992, which may be the *running* score at the break. Until
+    that's settled, store such cards as stage breaks (never a PB).
+- The step-ball number images are `s_num_N.png` for doubles too, so match any letter.
+- An inline `alert()` is on every logged-in page (the game-ID-change modal). Only treat a page as an
+  error page when `alert(…)` is directly followed by `document.location.replace` / `history.back`.
+- **Test fixtures:** scrubbed real pages (best pages 1–2 and `lv=20`, recently played, play data,
+  PUMBILITY, titles), plus login and "no Game ID" pages, are in
+  `spikes/02-piugame-login/fixtures/`. `check-parsers.ts` there ports PIU Scores' selectors and runs
+  them against the fixtures.
 - Add a timeout to every regex, and retry connection resets with exponential backoff (1s/2s/4s).
   Space out bulk requests (PIU Scores waits 250 ms between requests).
 

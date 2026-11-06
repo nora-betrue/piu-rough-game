@@ -100,7 +100,7 @@ Every score-derived table has a `mix` column.
 | `chart_mix` | chart_id, **mix**, level, note_count?, channel, added_version, is_current | Per-mix facts. Rebalances add rows instead of overwriting |
 | `users` / `oauth_accounts` | user ↔ (provider, provider_user_id) | Discord + Google |
 | `players` | id, **mix**, game_tag, user_id?, kind (`user`/`official`), hidden | A profile per mix. Seeded top-100 rows have no user until claimed |
-| `piugame_links` | user_id, login_id, **credential_ciphertext**, key_id, auto_scan, status, last_scan_at, last_full_scan_at | Opt-in stored login (see "Credentials") |
+| `piugame_links` | user_id, login_id, **credential_ciphertext**, key_id, sid_ciphertext?, sid_obtained_at?, auto_scan, status (`ok` / `needs_attention` / `needs_game_id`), last_scan_at, last_full_scan_at | Opt-in stored login (see "Credentials"). The sid columns are only used if sid caching is adopted |
 | `plays` | **score_id** (hash PK), player_id, chart_id, mix, score, plate?, is_broken, perfect?…miss?, max_combo?, played_at?, import_id, source | Append-only. Judgements are optional (all six fields or none) |
 | `pbs` | (player_id, chart_id), score, plate?, is_broken, grade, rating, best_score_play, best_plate_play | Derived: best score ∪ best plate, and a pass beats broken |
 | `player_stats` | player_id, pumbility, singles, doubles, coop, computed_at, alg_version | Derived |
@@ -140,8 +140,18 @@ included, then $0.40/M. That's far beyond what a few hundred users need.
   2. the best-score list newest-first, stopping at the first page with no changes;
   3. `play_data.php`: per-level record counts. If they differ from ours, upgrade to `full`.
 
-  It also does a weekly `full` scan per user as a safety net. A failed login marks the link
-  `needs_attention`, stops auto-scans and tells the user. No retry loops against a bad password.
+  It also does a weekly `full` scan per user as a safety net.
+- **Login outcomes** (exact signals in `DATA-SOURCES.md` §1, "Login flow"). Success is the POST's `302`,
+  confirmed by `g5_is_member = "1"` on the first page:
+  - wrong password or unknown email (POST `200` + `alert`) → link `needs_attention`, auto-scans stop,
+    and the user is told. No retry loops against a bad password;
+  - "No registered Game ID found." → link `needs_game_id`, and the user is asked to link a card on
+    piugame.com. It's never recorded as "zero scores";
+  - anything else (network errors, 5xx) → the queue retries with backoff. `525`/`526` is fatal (see
+    "piugame.com from Workers").
+- **Reusing sessions (pending):** a login costs about 12 requests and 10 s. If the 1 h / 24 h sid
+  checks (spike 2) pass, the consumer stores the sid encrypted next to the password and reuses it,
+  falling back to a full login when a page shows the login form.
 - **Bookmarklet:** posts batch JSON → stored in R2 → `imports` row → enqueued for the pipeline step only.
 - **PIU Scores webhook:** verified (HMAC) → enqueued the same way. Dedupe on (chart, recordedAt).
 
@@ -188,6 +198,8 @@ Background imports need the piugame password, so storing it is **opt-in** and ex
   `user_id` as associated data. `key_id` allows key rotation.
 - The plaintext exists only in the consumer's memory during a scrape. It is never logged, and
   never put in a queue message, error or R2 object.
+- A cached piugame **sid** is a credential too: a live session can change the user's account. It gets
+  the same envelope and rules, and is wiped on unlink, on a failed login and when the password changes.
 - **Unlink** deletes the row immediately. Deleting an account deletes everything.
 - Users who refuse can still use the bookmarklet.
 
@@ -362,8 +374,9 @@ uploads use a per-user upload token, scoped to the import endpoint and revocable
 The full briefs are in [`spikes/`](spikes/README.md). Each one is self-contained and can run in parallel.
 
 1. ✅ **Workers → piugame.com TLS.** Answered: deployed Workers work. See "piugame.com from Workers".
-2. **Login from Cloudflare egress.** Does the `login_check.php` → `am-pass.net` flow work from
-   Cloudflare, without captcha or blocking? It also produces scrubbed page fixtures for parser tests.
+2. ✅ **Login from Cloudflare egress.** Answered: it works from a deployed Worker and from Node, with no
+   captcha or blocking. Scrubbed fixtures with real scores are in `spikes/02-piugame-login/fixtures/`.
+   Still open: the 1 h / 24 h sid reuse checks, and whether an empty-grade best card is a stage break.
 3. **Bookmarklet CSP** on piugame.com. If external scripts are blocked, fall back to an inline bundle or a userscript.
 4. ✅ **Export rendering.** Answered: it fits, but costs 2–4 s of CPU, so it runs in a queue consumer. See "Exports".
 5. **PIU Scores API access.** Tool key, the `official/rankings` row count, and catalog field coverage.
