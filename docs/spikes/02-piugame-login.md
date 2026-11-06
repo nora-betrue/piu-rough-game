@@ -68,7 +68,7 @@ Sectigo DV R36 PEM via `NODE_EXTRA_CA_CERTS`, fingerprint checked against `DATA-
 from a **deployed** Worker (`rg-spike-02`, colo FRA). No captcha, no blocking, no `526`, no extra
 redirects compared with Node: the two hop logs are identical hop for hop.
 
-**But the page content could not be checked.** The dummy account has **no Game ID registered**, so
+**Page content (dummy account): not checkable.** _(Answered later with a game card, see "With a game card" below.)_ The dummy account has **no Game ID registered**, so
 all five `my_page/*` URLs return the same gnuboard error page (`alert("No registered Game ID
 found."); document.location.replace("/")`) inside the normal logged-in layout. So step 4 (layout and
 selectors) is **not answered yet**: neither `ul.my_best_scoreList` nor the redesigned card list is
@@ -195,6 +195,71 @@ Then scrub nickname, game tag and avatar URL before copying anything into `fixtu
 `curl -H "x-run-token: …" https://rg-spike-02.<subdomain>.workers.dev/run`, then `pnpm worker:delete`.
 Don't rerun `wrong-password`: a marker file (`results/.wrong-password-attempted`) blocks it.
 
+### With a game card (owner's account, 2026-11-06)
+
+The dummy account has no Game ID, so the owner provided **their own** AM.PASS login (it has a game
+card with Phoenix 2 plays). The owner chose to do this, overriding the "dummy account only" rule in
+`spikes/README.md` for this one capture. Extra rules applied: one login attempt, Node only, no
+wrong-password test, read-only GETs, ≤ 20 requests, raw HTML kept outside the repo and deleted
+afterwards, and the dummy `.sid-state.json` left untouched (the `capture` mode never writes it).
+
+**What ran** (`node.ts capture`, then `node.ts capture-rest`): **19 requests** in total, ≥ 250 ms apart.
+
+- `capture` (19:55 UTC, 13 requests): login with the same hops as above (POST **302**), then best-score page 1.
+  It stopped there: page 1 has an inline `alert('It is the same as the existing Game ID.')` (from the
+  game-ID-change modal that's on every logged-in page), and my first error-page check took that for a
+  gnuboard error. Fixed: only `alert(…)` directly followed by `document.location.replace`/`history.back`
+  counts now. `rejected` is now "POST status ≠ 302".
+- `capture-rest` (19:56 UTC, 6 requests, **no second login**): reused that run's sid (held in the
+  scratch folder only) for best page 2, `?lv=20` page 1, `recently_played`, `play_data`, `pumbility`
+  and `title`. All returned logged-in data pages.
+- Not fetched: `game_id_information.php`, other pages, logout (it changes state).
+
+**Fixtures:** `spikes/02-piugame-login/fixtures/with-game-id/` holds 7 pages. They were scrubbed by
+`scrub.ts`, which reads the identifying values out of the pages themselves and refuses to write a
+file that still has one. It replaced the nickname, all game IDs (`NAME #tag` on the main and
+sub-profiles), the `origin_game_id`/`user_no`/`sub_profile` hidden-input values, the avatar URLs
+(→ `…/avatar_img2/scrubbed.png?v=0`, same shape, so `ImageRegex` still matches), and the
+"Last Access Date / Recently Access Games" values. Kept: songs, chart images, scores, grades,
+plates, judgements, dates, titles.
+
+**Best-score list.** Total. **683** charts, **57** pages (12 cards per page). `?lv=20`: Total. 79,
+7 pages. The best-list `lv` select offers `10…26, 27over, 10over, coop`. `play_data.php`'s select
+also offers `1…9`.
+
+**Layout: the redesign** on all three best-score pages: `ul.recently_playeList > li` cards, no
+`ul.my_best_scoreList`. Run `node check-parsers.ts` to reproduce. It ports `PiuGameApi.cs`'s
+selectors and regexes to cheerio.
+
+| Page | Selector / regex (`PiuGameApi.cs`) | Result |
+|---|---|---|
+| best | `ul.my_best_scoreList` (classic) | absent: redesign served, so the sniff picks `ParseRedesignedBestScores` ✔ |
+| best | `ul.recently_playeList/li`, `div.song_name/p` | ✔ 12/12 per page |
+| best | `.stepBall_img_wrap .tw img` ~ `TypeRegex` | ✔ 12/12 (`s_text`, `d_text`; full `https://piugame.com/l_img/p2/stepball/full/…` URLs) |
+| best | `.stepBall_img_wrap .numw img` ~ `LevelRegex` | ✔ (doubles use `s_num_N.png` too, and the regex accepts any letter) |
+| best | `div.li_in.ac/i.tx` → score | ✔ 12/12 |
+| best | `div.li_in/img` ~ `PlateRegex` | ✔ (10/12, 11/12, 8/12 have a plate; the rest are broken) |
+| best | `p.recently_date_tt` ~ `RecordedAtRegex` | ✔ 12/12, e.g. `2026-11-05 10:49:14 (GMT+9)` |
+| best | `.total_wrap` → Total, `i.last` parent `onclick` → max page | ✔ 683 / 57 |
+| best | stage-break detection | ⚠ **gap**: the best list has two kinds of no-plate card. One has an `x_` grade image (`x_a.png`: broken, a real score). The other has an **empty grade `<img src="">`**, which `DATA-SOURCES.md` calls a stage break. `ParseRedesignedBestScores` treats both as `IsBroken` and doesn't skip the empty-grade ones. Needs confirming (one such card shows a 924,992 score). |
+| recent | `ul.recently_playeList/li` | ✔ 50 cards |
+| recent | `STAGE BREAK` in `div.li_in/i.tx` | ✔ 5 skipped (they're also the 5 empty-grade cards) |
+| recent | `td[data-th=PERFECT…MISS]/div` | ✔ 45/45 |
+| recent | broken = no `/plate/` img | ✔ 9 broken, 36 passed; broken grades are `x_*.png` |
+| recent | `p.recently_date_tt` | ✔ 45/45 |
+| recent | plate | ⚠ **changed**: recent cards now **do** carry a plate image (`div.li_in.st1 > img …/plate/mg.png`) on 36/45. `PiuGameApi.cs` assumes there's none and derives the plate from judgements. That still works, but the image is ground truth. |
+| pumbility | `li[div.top-wrap]` cards, `PumbilityValueRegex`, `ShortTypeRegex`, `.mid-wrap` song, grade/plate (`s_` prefix) | ✔ 50/50; the values sum to 17,190.81 |
+| pumbility | `div.pumbility_total_wrap` + `DecimalRegex` → total | ✗ **broken**: the wrap now starts with a tier label `DIAMOND Lv.1`, so the first number is **1**. The value is in `div.pumbility_total_wrap div.score` (`17,190<span class="pumbility-point-sub">.81</span>`). |
+| play_data | `a.play_log_btn[.//i.t_num]`, `data-type`, `data-division` | ✔ 24 tiles (16 grade, 8 plate), text `154 / 4,704` |
+| play_data | `div.clear_w div.t1` | absent (expected on Phoenix 2; the code handles it) |
+| play_data | `select[onchange*=lv=] option` | ✔ `,1…26,27over,10over,coop` |
+| title | `ul.data_titleList2/li`, `li.have`, `p.col*`, `data-name` | ✔ 298 titles, 77 owned |
+| title | `div.name_w/p.t2` (account name), `div.profile_img/div/div` style ~ `ImageRegex` (avatar) | ✔ |
+| any | `div.login_wrap` as "requires login" | ✗ present on logged-in pages (see above) |
+
+Sample parsed rows (from `check-parsers.ts`): best `GOODTEK D12 982,264 ss mg 2026-11-05 10:49:14 GMT+9`;
+recent `Desaparecer S20 970,159 fg P1210/Gr36/Go8/B4/M12`; pumbility `Cannon X.1 S20 sss mg 351.56`.
+
 ### Recommendation
 
 - **Keep the scraper in the `jobs` Worker.** No Container is needed for login (with spike 1, the TLS
@@ -206,7 +271,9 @@ Don't rerun `wrong-password`: a marker file (`results/.wrong-password-attempted`
   no retry; "No registered Game ID found." → its own user-facing state; anything else → retry with backoff.
 - **Cache the sid** (encrypted like the password) between scans if the 1 h / 24 h checks pass. That
   saves ~12 requests and ~10 s per scan. Fall back to a full login when a page shows the login form.
-- Before writing parsers: get the dummy account a Game ID with a few Phoenix 2 plays and rerun.
+- Parsers: port `PiuGameApi.cs`'s redesign paths (they match today, see "With a game card"), but fix
+  the PUMBILITY total, skip empty-grade best cards as stage breaks (after confirming), and read the
+  plate image on recent cards. Run `check-parsers.ts` against the fixtures in CI-style tests.
 
 ### Doc changes suggested (not made here)
 
@@ -222,5 +289,11 @@ Don't rerun `wrong-password`: a marker file (`results/.wrong-password-attempted`
   Container fallback.
 - `ARCHITECTURE.md` lines 138–139: define "failed login" (POST 200 + alert), and add a separate
   `needs_game_id` (or similar) link status for "No registered Game ID found."
-- `ARCHITECTURE.md` lines 282–286 (spikes 1–2): mark as answered, with spike 2's page-layout part
-  pending a Game ID on the dummy account.
+- `ARCHITECTURE.md` lines 282–286 (spikes 1–2): mark as answered.
+- `DATA-SOURCES.md` line 41 (best-score row): Phoenix 2 serves the redesign (checked 2026-11-06),
+  12 cards per page. Below-10 charts have no best-list bucket, but `play_data.php` offers `lv=1…9`.
+  Line 42 (recently played): the cards now carry a plate image. Line 43 (pumbility): the total is
+  in `.pumbility_total_wrap .score`, after a tier label (`DIAMOND Lv.1`).
+- `DATA-SOURCES.md` line 59 (empty grade image = stage break): true on recent cards (they also
+  say `STAGE BREAK`). On the redesigned best list it's the only signal, and broken plays use
+  `x_<grade>.png`. Spell both out.

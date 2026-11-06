@@ -107,9 +107,11 @@ export class PoliteClient {
   requests = 0;
   private last = 0;
   private log: (hop: Hop) => void;
+  private budget: number;
 
-  constructor(log: (hop: Hop) => void = () => {}) {
+  constructor(log: (hop: Hop) => void = () => {}, budget = MAX_REQUESTS) {
     this.log = log;
+    this.budget = budget;
   }
 
   private async wait() {
@@ -124,7 +126,7 @@ export class PoliteClient {
     let currentMethod = method;
     let body: string | undefined = form ? new URLSearchParams(form).toString() : undefined;
     for (let i = 0; i <= MAX_REDIRECTS; i++) {
-      if (this.requests >= MAX_REQUESTS) throw new Error(`request budget (${MAX_REQUESTS}) exhausted`);
+      if (this.requests >= this.budget) throw new Error(`request budget (${this.budget}) exhausted`);
       await this.wait();
       this.requests++;
       const headers: Record<string, string> = { "user-agent": USER_AGENT, accept: "text/html,*/*" };
@@ -208,7 +210,9 @@ export function summarise(path: string, r: { status: number; finalUrl: string; h
     loginPage: false,
   };
   s.loginPage = s.loginForm || !s.isMember;
-  const alert = r.html.match(/alert\(\s*["']([^"']{0,200})["']/)?.[1];
+  // Only gnuboard's alert page counts (alert + immediate redirect). Normal pages carry other
+  // inline alert() calls, e.g. the game-ID change form's "It is the same as the existing Game ID."
+  const alert = r.html.match(/alert\(\s*["']([^"']{0,200})["']\s*\);?\s*(?:document\.location\.replace|location\.href|history\.back)/)?.[1];
   if (alert) s.alert = alert;
   if (path.includes("my_best_score"))
     s.bestScoreLayout = has("my_best_scoreList") ? "classic" : has("recently_playeList") ? "redesign" : "neither";
@@ -255,7 +259,8 @@ export async function login(client: PoliteClient, id: string, password: string):
     sidChangedOnPost: !!sidBefore && !!sidAfter && sidBefore !== sidAfter,
     postStatus: post.status,
     postBodyHint,
-    rejected: !!alert,
+    // Success is a 302 from login_check.php; a rejection is a 200 alert page.
+    rejected: client.hops.find((h) => h.step.startsWith("2") && h.method === "POST")?.status !== 302,
   };
 }
 

@@ -1,0 +1,192 @@
+{
+  "runtime": "node v22.23.1",
+  "started": "2026-11-06T19:56:29.467Z",
+  "requests": 6,
+  "maxPage": 57,
+  "buckets": [
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27over",
+    "10over",
+    "coop"
+  ],
+  "pages": [
+    {
+      "file": "best-p1",
+      "path": "/my_page/my_best_score.php?&&page=1",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/my_best_score.php?&&page=1",
+      "bytes": 221144,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "bestScoreLayout": "redesign"
+    },
+    {
+      "file": "best-p2",
+      "path": "/my_page/my_best_score.php?&&page=2",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/my_best_score.php?&&page=2",
+      "bytes": 221551,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "bestScoreLayout": "redesign"
+    },
+    {
+      "file": "best-lv20-p1",
+      "path": "/my_page/my_best_score.php?lv=20&&page=1",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/my_best_score.php?lv=20&&page=1",
+      "bytes": 220537,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false,
+      "bestScoreLayout": "redesign"
+    },
+    {
+      "file": "recently_played",
+      "path": "/my_page/recently_played.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/recently_played.php",
+      "bytes": 390739,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false
+    },
+    {
+      "file": "play_data",
+      "path": "/my_page/play_data.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/play_data.php",
+      "bytes": 210320,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false
+    },
+    {
+      "file": "pumbility",
+      "path": "/my_page/pumbility.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/pumbility.php",
+      "bytes": 278382,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false
+    },
+    {
+      "file": "title",
+      "path": "/my_page/title.php",
+      "status": 200,
+      "finalUrl": "https://piugame.com/my_page/title.php",
+      "bytes": 467611,
+      "title": "PUMP IT UP PHOENIX2",
+      "loginWrap": true,
+      "loginForm": false,
+      "isMember": true,
+      "loginPage": false
+    }
+  ],
+  "hops": [
+    {
+      "n": 1,
+      "step": "5 /my_page/my_best_score.php?&&page=2",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/my_best_score.php?&&page=2",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)",
+        "2a0d2363701f23f8a75028924a3af643 (max-age=86400)"
+      ],
+      "ms": 1572
+    },
+    {
+      "n": 2,
+      "step": "5 /my_page/my_best_score.php?lv=20&&page=1",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/my_best_score.php?lv=20&&page=1",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)"
+      ],
+      "ms": 709
+    },
+    {
+      "n": 3,
+      "step": "5 /my_page/recently_played.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/recently_played.php",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)"
+      ],
+      "ms": 851
+    },
+    {
+      "n": 4,
+      "step": "5 /my_page/play_data.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/play_data.php",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)"
+      ],
+      "ms": 463
+    },
+    {
+      "n": 5,
+      "step": "5 /my_page/pumbility.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/pumbility.php",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)"
+      ],
+      "ms": 897
+    },
+    {
+      "n": 6,
+      "step": "5 /my_page/title.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/title.php",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)"
+      ],
+      "ms": 729
+    }
+  ]
+}

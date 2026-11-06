@@ -2,6 +2,8 @@
 //   NODE_EXTRA_CA_CERTS=certs/sectigo-dv-r36.pem node node.ts login           # full flow, saves sid state
 //   NODE_EXTRA_CA_CERTS=certs/sectigo-dv-r36.pem node node.ts reuse <label>   # re-use the saved sid only
 //   NODE_EXTRA_CA_CERTS=certs/sectigo-dv-r36.pem node node.ts wrong-password  # once only
+//   RAW_DIR=… NODE_EXTRA_CA_CERTS=… node node.ts capture          # 1 login + read-only score pages
+//   RAW_DIR=… NODE_EXTRA_CA_CERTS=… node node.ts capture-rest [n] # rest of the pages on capture's sid, no login
 // Raw (unscrubbed) HTML goes to $RAW_DIR, which must be outside the repo. Results go to results/.
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { BASE, PoliteClient, fetchPages, login, summarise, type Hop } from "./login.ts";
@@ -54,6 +56,84 @@ if (mode === "login") {
   pages.forEach((p, i) => writeFileSync(`${rawDir}/${i + 1}-${p.summary.path.split("/")[2].split(".")[0]}.html`, p.html));
   console.table(pages.map((p) => p.summary));
   save("node-login", { runtime: `node ${process.version}`, started, requests: client.requests, result, pages: pages.map((p) => p.summary), hops: client.hops });
+} else if (mode === "capture") {
+  // One login on an account WITH a game card, read-only GETs only, raw HTML to RAW_DIR (outside
+  // the repo). Never touches .sid-state.json (that holds the dummy account's sid for the 1 h / 24 h
+  // checks). The sid is kept in RAW_DIR only, so the secret grep can look for it; delete RAW_DIR after.
+  const rawDir = process.env.RAW_DIR;
+  if (!rawDir) throw new Error("set RAW_DIR to a folder outside the repo");
+  mkdirSync(rawDir, { recursive: true, mode: 0o700 });
+  const client = new PoliteClient(printHop, 20);
+  const result = await login(client, PIU_ID, PIU_PASSWORD);
+  console.log("login: rejected=%s postStatus=%s hint=%s", result.rejected, result.postStatus, result.postBodyHint);
+  const pages: { summary: ReturnType<typeof summarise>; file: string }[] = [];
+  const get = async (path: string, file: string) => {
+    const r = await client.request(`5 ${path}`, "GET", `${BASE}${path}`);
+    writeFileSync(`${rawDir}/${file}.html`, r.html, { mode: 0o600 });
+    const summary = summarise(path, r);
+    pages.push({ summary, file });
+    console.log(file, JSON.stringify({ status: summary.status, isMember: summary.isMember, loginForm: summary.loginForm, alert: summary.alert, layout: summary.bestScoreLayout }));
+    return r.html;
+  };
+  if (!result.rejected) {
+    const best1 = await get("/my_page/my_best_score.php?&&page=1", "best-p1");
+    const first = pages[0].summary;
+    if (first.isMember && !first.loginForm && !first.alert) {
+      // Max page: the onclick of i.last's parent (PiuGameApi.cs ParseBestScoresMaxPage).
+      const maxPage = Number(best1.match(/onclick="[^"]*page=(\d+)[^"]*"[^>]*>\s*<i[^>]*class="[^"]*\blast\b/)?.[1] ?? 0)
+        || Math.max(1, ...[...best1.matchAll(/page=(\d+)/g)].map((m) => Number(m[1])));
+      const buckets = [...(best1.match(/<select[^>]*onchange="[^"]*lv=[\s\S]*?<\/select>/)?.[0] ?? "").matchAll(/<option[^>]*value="([^"]*)"/g)]
+        .map((m) => m[1]).filter(Boolean);
+      console.log("best list: maxPage=%d lv buckets=%j", maxPage, buckets);
+      if (maxPage >= 2) await get("/my_page/my_best_score.php?&&page=2", "best-p2");
+      const lv = buckets.find((b) => b === "20") ?? buckets[Math.floor(buckets.length / 2)];
+      if (lv) await get(`/my_page/my_best_score.php?lv=${encodeURIComponent(lv)}&&page=1`, `best-lv${lv}-p1`);
+      await get("/my_page/recently_played.php", "recently_played");
+      await get("/my_page/play_data.php", "play_data");
+      await get("/my_page/pumbility.php", "pumbility");
+      await get("/my_page/title.php", "title");
+    }
+    const sid = client.jar.cookies.find((c) => c.name === "sid" && c.domain === "piugame.com");
+    if (sid) writeFileSync(`${rawDir}/real-sid-state.json`, JSON.stringify({ value: sid.value }), { mode: 0o600 });
+  }
+  save("node-capture", { runtime: `node ${process.version}`, started, requests: client.requests, result, pages: pages.map((p) => ({ file: p.file, ...p.summary })), hops: client.hops });
+  console.log("requests:", client.requests);
+} else if (mode === "capture-rest") {
+  // Continuation of "capture" WITHOUT a new login: reuses the sid saved in RAW_DIR (the first run
+  // stopped after page 1 because an inline alert() was misread as an error page).
+  const rawDir = process.env.RAW_DIR;
+  if (!rawDir) throw new Error("set RAW_DIR");
+  const budget = Number(process.argv[3] ?? 7);
+  const client = new PoliteClient(printHop, budget);
+  const { value } = JSON.parse(readFileSync(`${rawDir}/real-sid-state.json`, "utf8"));
+  client.jar.cookies.push({ name: "sid", value, domain: "piugame.com", hostOnly: true });
+  const best1 = readFileSync(`${rawDir}/best-p1.html`, "utf8");
+  const maxPage = Number(best1.match(/onclick="[^"]*page=(\d+)[^"]*"[^>]*>\s*<i[^>]*class="[^"]*\blast\b/)?.[1] ?? 0)
+    || Math.max(1, ...[...best1.matchAll(/page=(\d+)/g)].map((m) => Number(m[1])));
+  const buckets = [...(best1.match(/<select[^>]*onchange="[^"]*lv=[\s\S]*?<\/select>/)?.[0] ?? "").matchAll(/<option[^>]*value="([^"]*)"/g)]
+    .map((m) => m[1]).filter(Boolean);
+  console.log("best list: maxPage=%d lv buckets=%j", maxPage, buckets);
+  const pages: Record<string, unknown>[] = [{ file: "best-p1", ...summarise("/my_page/my_best_score.php?&&page=1", { status: 200, finalUrl: `${BASE}/my_page/my_best_score.php?&&page=1`, html: best1 }) }];
+  const get = async (path: string, file: string) => {
+    const r = await client.request(`5 ${path}`, "GET", `${BASE}${path}`);
+    writeFileSync(`${rawDir}/${file}.html`, r.html, { mode: 0o600 });
+    const summary = summarise(path, r);
+    pages.push({ file, ...summary });
+    console.log(file, JSON.stringify({ status: summary.status, isMember: summary.isMember, loginForm: summary.loginForm, alert: summary.alert, layout: summary.bestScoreLayout }));
+    if (summary.loginPage || summary.alert) throw new Error(`stopping: ${file} is not a data page`);
+  };
+  try {
+    if (maxPage >= 2) await get("/my_page/my_best_score.php?&&page=2", "best-p2");
+    const lv = buckets.find((b) => b === "20") ?? buckets[Math.floor(buckets.length / 2)];
+    if (lv) await get(`/my_page/my_best_score.php?lv=${encodeURIComponent(lv)}&&page=1`, `best-lv${lv}-p1`);
+    await get("/my_page/recently_played.php", "recently_played");
+    await get("/my_page/play_data.php", "play_data");
+    await get("/my_page/pumbility.php", "pumbility");
+    await get("/my_page/title.php", "title");
+  } finally {
+    save("node-capture-rest", { runtime: `node ${process.version}`, started, requests: client.requests, maxPage, buckets, pages, hops: client.hops });
+    console.log("requests:", client.requests);
+  }
 } else if (mode === "reuse") {
   const label = process.argv[3] ?? "adhoc";
   if (!existsSync(SID_STATE)) throw new Error(`no ${SID_STATE}: run "login" first`);

@@ -2,3 +2,4 @@
 .sid-state.json
 node_modules/
 .wrangler/
+.sid-state*.json
