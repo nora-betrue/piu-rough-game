@@ -149,9 +149,9 @@ included, then $0.40/M. That's far beyond what a few hundred users need.
     piugame.com. It's never recorded as "zero scores";
   - anything else (network errors, 5xx) → the queue retries with backoff. `525`/`526` is fatal (see
     "piugame.com from Workers").
-- **Reusing sessions (pending):** a login costs about 12 requests and 10 s. If the 1 h / 24 h sid
-  checks (spike 2) pass, the consumer stores the sid encrypted next to the password and reuses it,
-  falling back to a full login when a page shows the login form.
+- **Reusing sessions (pending):** a login costs about 12 requests and 10 s. A session was still valid
+  after 75 minutes idle. If the 24 h check (spike 2) also passes, the consumer stores the sid encrypted
+  next to the password and reuses it, falling back to a full login when a page shows the login form.
 - **Bookmarklet:** posts batch JSON → stored in R2 → `imports` row → enqueued for the pipeline step only.
 - **PIU Scores webhook:** verified (HMAC) → enqueued the same way. Dedupe on (chart, recordedAt).
 

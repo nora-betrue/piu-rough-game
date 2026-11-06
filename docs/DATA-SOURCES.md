@@ -48,9 +48,11 @@ Verified 2026-11-06 (spike 2), from Node and from a deployed Worker. About 12 re
 | Logged in, but no game card linked | every `my_page/*` URL: `200`, logged-in layout, `alert("No registered Game ID found."); document.location.replace("/")` | `needs_game_id`: tell the user to link a card on piugame.com. Not "zero scores". |
 | Session expired | a page shows `form[name=flogin]` / `g5_is_member = ""` | log in again (if a cached sid was used) |
 
-Cookie lifetimes as set: `sid` Max-Age 1 year, `PHPSESSID` 7 days, both renewed on every request. A
-session survived at 4 minutes and through a wrong-password attempt from another client. The 1 h and
-24 h reuse checks are pending. If they pass, cache the sid between scans (encrypted, like the password).
+Cookie lifetimes as set: `sid` Max-Age 1 year, `PHPSESSID` 7 days, and a hex-named cookie
+(gnuboard's, e.g. `2a0d…`) **1 day**, all re-issued on every request. A session survived 4 minutes,
+a wrong-password attempt from another client, and **75 minutes** idle (checked 2026-11-06). The 24 h
+check is pending (it runs 23 h after that 75-minute touch). If it passes, cache the sid between daily
+scans (encrypted, like the password).
 
 **Phoenix 2 has no anonymous pages.** Leaderboards also need a login there.
 

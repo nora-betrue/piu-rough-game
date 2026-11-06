@@ -1,0 +1,39 @@
+{
+  "runtime": "node v22.23.1",
+  "started": "2026-11-06T20:57:49.770Z",
+  "obtainedAt": "2026-11-06T19:42:43.413Z",
+  "ageMinutes": 75,
+  "valid": true,
+  "cookieNamesAfter": [
+    "sid@.piugame.com",
+    "PHPSESSID@.piugame.com",
+    "2a0d2363701f23f8a75028924a3af643@.piugame.com"
+  ],
+  "page": {
+    "path": "/my_page/title.php",
+    "status": 200,
+    "finalUrl": "https://piugame.com/my_page/title.php",
+    "bytes": 179874,
+    "title": "PUMP IT UP PHOENIX2",
+    "loginWrap": true,
+    "loginForm": false,
+    "isMember": true,
+    "loginPage": false,
+    "alert": "No registered Game ID found."
+  },
+  "hops": [
+    {
+      "n": 1,
+      "step": "5 /my_page/title.php",
+      "method": "GET",
+      "url": "https://piugame.com/my_page/title.php",
+      "status": 200,
+      "setCookies": [
+        "sid (max-age=31536000)",
+        "PHPSESSID (max-age=604800)",
+        "2a0d2363701f23f8a75028924a3af643 (max-age=86400)"
+      ],
+      "ms": 1370
+    }
+  ]
+}

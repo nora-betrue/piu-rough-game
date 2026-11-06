@@ -179,6 +179,13 @@ login/error detection, not for score parsing. Score fixtures still need an accou
   ```
 
   It prints `sid age N min -> VALID | NOT VALID` and writes `results/node-reuse-<label>.json`.
+
+- **1 h result (2026-11-06 20:57 UTC): VALID at 75 minutes** (`results/node-reuse-1h.json`).
+  `g5_is_member = "1"`, no login form, and the dummy account's "No registered Game ID found." page.
+  The response re-issued `sid` (1 year), `PHPSESSID` (7 days), and a **third, hex-named cookie with
+  `Max-Age=86400` (1 day)** that wasn't noted before. If the server ties the session to that 1-day
+  cookie, a sid touched only once a day sits right at the edge, so the 24 h check matters. It runs
+  ~23 h after this touch, since this check refreshed the session.
   VALID means `g5_is_member = "1"` and no login form. Note that each check also *refreshes* the
   session, so the 24 h result means "24 h since login with one touch at 1 h". For a clean idle test,
   skip the 1 h check.
